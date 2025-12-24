@@ -24,6 +24,7 @@ Current AI tools suffer from **"forgetful genius" syndrome**:
 ### Root Cause
 
 AI memory solutions today are either:
+
 1. **Too simple** - JSON key-value stores that don't scale
 2. **Too heavy** - Require Docker, Neo4j, or cloud services
 3. **Too siloed** - Only work with one AI tool (e.g., only Claude)
@@ -31,6 +32,7 @@ AI memory solutions today are either:
 ### User Impact
 
 Heavy AI users spend significant cognitive load on:
+
 - Writing "context preambles" for each session
 - Maintaining manual project documentation
 - Repeating preferences ("don't use Java", "prefer concise answers")
@@ -43,12 +45,12 @@ Heavy AI users spend significant cognitive load on:
 
 Inspired by computer memory hierarchy (registers → cache → RAM → disk):
 
-| Layer | Name | Content | Storage |
-|-------|------|---------|---------|
-| **Global** | User Profile | Preferences, coding style, communication style | SQLite `config` table |
-| **Long-term** | Knowledge Base | API docs, code snippets, reference materials | LanceDB (vectors) |
-| **Medium-term** | Project State | Current project status, TODOs, known bugs | NetworkX (graph) |
-| **Short-term** | Session Context | Recent conversation, current task state | SQLite `chat_logs` table |
+| Layer           | Name            | Content                                        | Storage                  |
+| --------------- | --------------- | ---------------------------------------------- | ------------------------ |
+| **Global**      | User Profile    | Preferences, coding style, communication style | SQLite `config` table    |
+| **Long-term**   | Knowledge Base  | API docs, code snippets, reference materials   | LanceDB (vectors)        |
+| **Medium-term** | Project State   | Current project status, TODOs, known bugs      | NetworkX (graph)         |
+| **Short-term**  | Session Context | Recent conversation, current task state        | SQLite `chat_logs` table |
 
 ### Architecture: Sidecar Model
 
@@ -107,20 +109,21 @@ Memslice runs as an **independent local service** that AI tools connect to:
 
 ### Technology Stack
 
-| Component | Choice | Rationale |
-|-----------|--------|-----------|
-| **Vector DB** | LanceDB | Embedded, Rust-based, no dependencies, millisecond cold start |
-| **Graph DB** | NetworkX | Pure Python, file-based (JSON), perfect for entity relationships |
-| **Meta DB** | SQLite | Built-in Python, WAL mode for concurrency, battle-tested |
-| **Embeddings** | FastEmbed | Local CPU inference, no PyTorch required |
-| **API Server** | FastAPI | Modern, fast, automatic OpenAPI docs |
-| **MCP Server** | Python MCP SDK | Native Claude Desktop integration |
+| Component      | Choice         | Rationale                                                        |
+| -------------- | -------------- | ---------------------------------------------------------------- |
+| **Vector DB**  | LanceDB        | Embedded, Rust-based, no dependencies, millisecond cold start    |
+| **Graph DB**   | NetworkX       | Pure Python, file-based (JSON), perfect for entity relationships |
+| **Meta DB**    | SQLite         | Built-in Python, WAL mode for concurrency, battle-tested         |
+| **Embeddings** | FastEmbed      | Local CPU inference, no PyTorch required                         |
+| **API Server** | FastAPI        | Modern, fast, automatic OpenAPI docs                             |
+| **MCP Server** | Python MCP SDK | Native Claude Desktop integration                                |
 
 ### Why LanceDB over ChromaDB?
 
 See [lancedb-vs-chromadb.md](./lancedb-vs-chromadb.md) for detailed comparison.
 
 Key reasons:
+
 - True embedded (no background process)
 - Minimal dependencies (no ONNXRuntime conflicts)
 - Consistent with SQLite/NetworkX file-based philosophy
@@ -138,12 +141,12 @@ Key reasons:
 
 ### Memory Mapping
 
-| Memory Type | Storage | Content Examples |
-|-------------|---------|------------------|
-| **Global** | SQLite `config` | "I prefer Python type hints", "Always use PEP8" |
-| **Long-term** | LanceDB | API documentation, code snippets, past solutions |
-| **Medium-term** | NetworkX | Project → uses → Python, Bug → blocks → Feature |
-| **Short-term** | SQLite `chat_logs` | Last 10 conversation turns |
+| Memory Type     | Storage            | Content Examples                                 |
+| --------------- | ------------------ | ------------------------------------------------ |
+| **Global**      | SQLite `config`    | "I prefer Python type hints", "Always use PEP8"  |
+| **Long-term**   | LanceDB            | API documentation, code snippets, past solutions |
+| **Medium-term** | NetworkX           | Project → uses → Python, Bug → blocks → Feature  |
+| **Short-term**  | SQLite `chat_logs` | Last 10 conversation turns                       |
 
 ---
 
@@ -182,12 +185,12 @@ DELETE /memory/:id
 
 For Claude Desktop integration:
 
-| Tool | Description |
-|------|-------------|
-| `memslice_recall` | Retrieve relevant context for a query |
-| `memslice_remember` | Store new information |
-| `memslice_project_status` | Get/update current project state |
-| `memslice_link` | Create entity relationships |
+| Tool                      | Description                           |
+| ------------------------- | ------------------------------------- |
+| `memslice_recall`         | Retrieve relevant context for a query |
+| `memslice_remember`       | Store new information                 |
+| `memslice_project_status` | Get/update current project state      |
+| `memslice_link`           | Create entity relationships           |
 
 ---
 
@@ -254,14 +257,14 @@ AI Response: "Fixed by adding token expiry check"
 
 See [claude-mem-analysis.md](./claude-mem-analysis.md) for detailed analysis.
 
-| Aspect | claude-mem | Memslice |
-|--------|------------|----------|
-| **Storage** | SQLite + ChromaDB | SQLite + LanceDB + NetworkX |
-| **Graph Support** | No explicit entity graph | NetworkX for relationships |
-| **Dependencies** | Heavy (ChromaDB → ONNXRuntime) | Lightweight (LanceDB) |
-| **Target** | Claude-only | Universal (any AI tool) |
-| **Search** | Hybrid (vector + FTS) | Hybrid + graph traversal |
-| **Complexity** | Worker service + many routes | Simple single-process |
+| Aspect            | claude-mem                     | Memslice                    |
+| ----------------- | ------------------------------ | --------------------------- |
+| **Storage**       | SQLite + ChromaDB              | SQLite + LanceDB + NetworkX |
+| **Graph Support** | No explicit entity graph       | NetworkX for relationships  |
+| **Dependencies**  | Heavy (ChromaDB → ONNXRuntime) | Lightweight (LanceDB)       |
+| **Target**        | Claude-only                    | Universal (any AI tool)     |
+| **Search**        | Hybrid (vector + FTS)          | Hybrid + graph traversal    |
+| **Complexity**    | Worker service + many routes   | Simple single-process       |
 
 ### Key Differentiators
 
@@ -372,12 +375,130 @@ memslice/
 
 ---
 
+## Project Identity
+
+### The Problem
+
+AI tools typically use directory path as project identifier:
+
+```
+/Users/yumin/ventures/my-project  → has memories
+              ↓ rename
+/Users/yumin/ventures/better-name → memories lost!
+```
+
+### Solution: `.memslice.yml` Config File
+
+Each project gets a **committed** config file with a stable UUID and optional settings:
+
+```
+my-project/
+├── .memslice.yml          # Project identity + config
+├── .git/
+└── src/
+```
+
+**Minimal:**
+
+```yaml
+id: proj_a1b2c3d4
+```
+
+**Full example:**
+
+```yaml
+# .memslice.yml
+
+id: proj_a1b2c3d4
+
+# Optional metadata
+name: "My Awesome Project"
+tags:
+  - backend
+  - python
+
+# Patterns to exclude from memory ingestion
+ignore:
+  - "*.log"
+  - "node_modules/**"
+  - ".env*"
+
+# Related projects (for cross-project context)
+related:
+  - proj_xyz789 # shared library
+  - proj_def456 # frontend counterpart
+
+# Auto-capture settings
+auto_memorize:
+  decisions: true # capture architectural decisions
+  todos: true # track TODOs
+  errors: false # don't store error logs
+```
+
+### Design Principles
+
+| Component       | Location       | Shared?       | Purpose                    |
+| --------------- | -------------- | ------------- | -------------------------- |
+| `.memslice.yml` | Project root   | ✅ Committed  | Project identity + config  |
+| `~/.memslice/`  | Home directory | ❌ Local only | Personal memories database |
+
+### Workflow
+
+```
+# Person A creates project
+→ Memslice generates .memslice.yml with id: "proj_abc"
+→ Person A commits .memslice.yml to git
+
+# Person B clones repo
+→ Sees existing .memslice.yml with id "proj_abc"
+→ Checks local ~/.memslice/ DB → no memories for this ID
+→ Starts fresh, but uses same ID
+
+# Person A on new machine
+→ Clones repo → sees "proj_abc" in .memslice.yml
+→ Syncs personal ~/.memslice/ DB (optional)
+→ All memories reconnect automatically
+```
+
+### Benefits
+
+- **Rename-proof** - Directory name changes, UUID stays
+- **Move-proof** - Move project anywhere, UUID stays
+- **Clone-friendly** - Team shares ID, not memories
+- **Multi-machine** - Sync your DB, memories follow you
+
+### Identity Resolution Order
+
+1. Look for `.memslice.yml` in project root → use existing ID
+2. Not found? Generate new UUID → create `.memslice.yml`
+3. Prompt user to commit `.memslice.yml` to version control
+
+---
+
 ## Open Questions
 
-1. **Entity Extraction** - Use LLM (expensive) or rule-based (limited)?
-2. **Memory Decay** - Should old memories fade or persist forever?
-3. **Multi-user** - Is this ever multi-user or always personal?
-4. **Sync** - Optional cloud backup/sync across machines?
+- **Entity Extraction** - Use LLM (expensive) or rule-based (limited)?
+
+  - LLM-first
+  - user can choose to use rule-base, like regex
+
+- **Memory Decay** - Should old memories fade or persist forever?
+
+  - GREAT QUESTION
+  - TBD
+
+- **Multi-user** - Is this ever multi-user or always personal?
+
+  - .memslice.yml is shared, config is shared
+  - ~/.memslice/ directory is personal
+  - so, no, always personal
+
+- **Sync** - Optional cloud backup/sync across machines?
+
+  - v2
+
+- **Conflict Resolution** - What if someone changes `.memslice.yml` ID manually?
+  - User's choice, user's burden
 
 ---
 
