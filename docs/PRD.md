@@ -1,12 +1,27 @@
 # Memslice - Product Requirements Document
 
-> A lightweight, local-first memory service for AI systems.
+> The universal memory layer for AI coding agents.
 
 ## Executive Summary
 
-**Memslice** is a local memory service that provides persistent, structured memory for AI tools (Claude Code, Codex, custom agents). It acts as a "sidecar" service—running independently and exposing standard APIs (REST + MCP) for any AI system to store and recall context.
+**Memslice** is an open-source memory layer for agentic coding tools. It provides persistent, structured memory that works across Claude Code, Codex CLI, Gemini CLI, Cursor, and any MCP-compatible or REST-based AI tool.
 
-**Vision:** Stop explaining context to AI repeatedly. Let AI tools remember across sessions, projects, and conversations.
+**Vision:** Your AI coding assistant finally remembers—your codebase, your preferences, your past decisions—across every session and every tool.
+
+### Strategy
+
+| Aspect | Decision |
+|--------|----------|
+| **Audience** | Developers using agentic coding tools |
+| **Model** | Open source (MIT) |
+| **Goal** | Community adoption, GitHub stars, ecosystem influence |
+| **Monetization** | Not a priority (possible future: hosted/enterprise) |
+
+### Quick Start
+
+```bash
+pip install memslice && memslice start -d
+```
 
 ---
 
@@ -14,28 +29,35 @@
 
 ### The Pain Point
 
-Current AI tools suffer from **"forgetful genius" syndrome**:
+Agentic coding tools (Claude Code, Codex, Cursor, Gemini CLI) are powerful but **amnesiac**:
 
-- Long conversations lose early context (lost in the middle)
-- New chat sessions start from zero
-- Switching between projects requires re-explaining everything
-- User preferences must be repeated constantly
+- Every new session starts from zero context
+- Tool-specific memory doesn't transfer (Cursor memories don't help Claude Code)
+- Project context must be re-explained constantly
+- Coding preferences are forgotten ("use pnpm", "prefer functional style")
+- Past debugging sessions and decisions are lost
 
 ### Root Cause
 
-AI memory solutions today are either:
+Each AI coding tool builds its own memory (or none at all):
 
-1. **Too simple** - JSON key-value stores that don't scale
-2. **Too heavy** - Require Docker, Neo4j, or cloud services
-3. **Too siloed** - Only work with one AI tool (e.g., only Claude)
+| Tool | Memory | Problem |
+|------|--------|---------|
+| Claude Code | CLAUDE.md files | Tool-specific, manual |
+| Cursor | .cursorrules | Tool-specific |
+| Codex | None built-in | Starts fresh every time |
+| Gemini CLI | None built-in | Starts fresh every time |
 
-### User Impact
+There's no **universal memory layer** that works across all tools.
 
-Heavy AI users spend significant cognitive load on:
+### Developer Impact
 
-- Writing "context preambles" for each session
-- Maintaining manual project documentation
-- Repeating preferences ("don't use Java", "prefer concise answers")
+Developers waste time on:
+
+- Writing and maintaining CLAUDE.md / .cursorrules for each tool
+- Re-explaining project architecture in new sessions
+- Repeating coding preferences ("use TypeScript strict mode", "prefer composition")
+- Losing context from past debugging sessions
 
 ---
 
@@ -89,19 +111,20 @@ Memslice runs as an **independent local service** that AI tools connect to:
 
 ### Core Principles
 
-1. **Local-First** - All data on local disk, no cloud dependency
-2. **Standalone Service** - Runs independently, survives client crashes
-3. **Universal Interface** - REST API + MCP protocol for any client
-4. **Lightweight** - No Docker, no Java, no heavy dependencies
-5. **Portable** - Copy the data folder to migrate everything
-6. **Explicit Context** - Precise retrieval, not dumping entire memory
+1. **Universal** - Works with ANY agentic coding tool, not locked to one ecosystem
+2. **Local-First** - All data on local disk, no cloud dependency, your data stays yours
+3. **Lightweight** - No Docker, no Java, no heavy dependencies—just Python
+4. **Zero-Config** - `pip install && memslice start -d` should just work
+5. **Portable** - Copy `~/.memslice/` to migrate everything
+6. **Open Source** - MIT license, community-driven, no vendor lock-in
 
 ### What We're NOT Building
 
-- ❌ A LangChain/LangGraph wrapper (too heavy)
-- ❌ A cloud service (defeats local-first)
-- ❌ A Claude-only plugin (must be universal)
-- ❌ A simple JSON store (doesn't scale)
+- ❌ A LangChain/LangGraph wrapper (too heavy, unnecessary abstraction)
+- ❌ A cloud service (local-first, your data stays yours)
+- ❌ A tool-specific plugin (must work with ALL agentic coding tools)
+- ❌ Another AI wrapper/chatbot (we're infrastructure, not interface)
+- ❌ A monetization-first product (open source, community-first)
 
 ---
 
@@ -194,6 +217,45 @@ For Claude Desktop integration:
 
 ---
 
+## Supported Integrations
+
+Memslice works with any tool that supports MCP or REST APIs:
+
+| Tool | Integration | Status |
+|------|-------------|--------|
+| **Claude Code** | MCP Server | 🎯 Primary |
+| **Cursor** | MCP Server | 🎯 Primary |
+| **Codex CLI** | REST API | 🎯 Primary |
+| **Gemini CLI** | REST API | 🎯 Primary |
+| **Windsurf** | MCP Server | Planned |
+| **Aider** | REST API | Planned |
+| **Custom Agents** | REST API | ✅ Works |
+
+### Integration Examples
+
+**Claude Code / Cursor (MCP):**
+```json
+{
+  "mcpServers": {
+    "memslice": {
+      "command": "memslice",
+      "args": ["mcp"]
+    }
+  }
+}
+```
+
+**Codex / Gemini CLI (REST):**
+```bash
+# Start the server
+memslice start
+
+# Tools can call the API
+curl localhost:8999/recall -d '{"query": "auth implementation"}'
+```
+
+---
+
 ## Core Workflows
 
 ### Recall Flow (Query → Context)
@@ -253,7 +315,19 @@ AI Response: "Fixed by adding token expiry check"
 
 ---
 
-## Differentiation from claude-mem
+## Differentiation
+
+### vs. Tool-Specific Memory
+
+| Aspect | CLAUDE.md | .cursorrules | Memslice |
+|--------|-----------|--------------|----------|
+| **Scope** | Claude Code only | Cursor only | All tools |
+| **Format** | Manual markdown | Manual text | Automatic + structured |
+| **Semantic Search** | ❌ | ❌ | ✅ Vector search |
+| **Relationships** | ❌ | ❌ | ✅ Graph (NetworkX) |
+| **Cross-Project** | ❌ | ❌ | ✅ Shared memory |
+
+### vs. claude-mem
 
 See [claude-mem-analysis.md](./claude-mem-analysis.md) for detailed analysis.
 
@@ -264,14 +338,13 @@ See [claude-mem-analysis.md](./claude-mem-analysis.md) for detailed analysis.
 | **Dependencies**  | Heavy (ChromaDB → ONNXRuntime) | Lightweight (LanceDB)       |
 | **Target**        | Claude-only                    | Universal (any AI tool)     |
 | **Search**        | Hybrid (vector + FTS)          | Hybrid + graph traversal    |
-| **Complexity**    | Worker service + many routes   | Simple single-process       |
 
 ### Key Differentiators
 
-1. **Graph Relationships** - NetworkX enables "Project A uses Library B" queries
-2. **Lighter Stack** - LanceDB vs ChromaDB reduces dependency hell
-3. **Universal Service** - Not tied to Claude ecosystem
-4. **Simpler Architecture** - No separate worker process needed
+1. **Universal** - One memory layer for all your coding tools
+2. **Graph Relationships** - NetworkX enables "Project A uses Library B" queries
+3. **Lighter Stack** - LanceDB vs ChromaDB reduces dependency hell
+4. **Open Source** - MIT license, community-driven
 
 ---
 
@@ -360,18 +433,30 @@ memslice/
 
 ## Success Metrics
 
-### Functional Requirements
+### Technical Requirements
 
 - [ ] Cold start < 500ms
 - [ ] Recall latency < 100ms for 100K memories
-- [ ] Support concurrent access (multiple Claude windows)
+- [ ] Support concurrent access (multiple tools simultaneously)
 - [ ] Data portable (copy folder = full migration)
-
-### User Experience
-
-- [ ] Zero-config startup (`memslice start`)
 - [ ] Works offline (no internet required)
 - [ ] Memory usage < 200MB idle
+
+### Developer Experience
+
+- [ ] One-command install: `pip install memslice`
+- [ ] One-command start: `memslice start -d`
+- [ ] Works with Claude Code out of the box
+- [ ] Clear, copy-paste integration docs for each tool
+- [ ] Helpful error messages
+
+### Open Source Goals
+
+- [ ] Comprehensive README with GIFs/demos
+- [ ] GitHub stars (vanity metric, but indicates reach)
+- [ ] Community contributions (PRs, issues, discussions)
+- [ ] Mentions in AI coding tool communities
+- [ ] Integration into popular dotfiles / starter configs
 
 ---
 
