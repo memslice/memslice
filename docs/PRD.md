@@ -429,6 +429,120 @@ memslice/
 
 **Deliverable:** Memslice automatically builds knowledge graph from conversations
 
+### Phase 5: Memslice Wiki
+
+**Goal:** Pre-built CodeGraph databases for famous open source projects
+
+- [ ] CodeGraph pipeline (parse → graph → cluster → summarize)
+- [ ] CLI: `memslice wiki pull linux-kernel`
+- [ ] Host pre-built databases on CDN
+- [ ] Initial targets: Linux kernel, Node.js, Chromium, Bun, React
+
+**Deliverable:** `memslice wiki pull linux-kernel && memslice recall "how does epoll work"`
+
+---
+
+## CodeGraph Architecture (for Wiki)
+
+For large codebases (1M+ lines), simple vector search isn't enough. CodeGraph leverages code structure:
+
+### Stack
+
+| Component | Tool | Purpose |
+|-----------|------|---------|
+| **Parse** | tree-sitter | Multi-language AST extraction |
+| **Graph** | DuckDB | Store nodes/edges, recursive CTE queries |
+| **Vectors** | LanceDB | Semantic search on code + summaries |
+| **Clustering** | igraph | Louvain community detection |
+| **Embeddings** | FastEmbed | Local, no API dependency |
+| **Summaries** | LLM | Generate cluster/subsystem summaries |
+
+### Schema (DuckDB)
+
+```sql
+-- Nodes: files, functions, classes, modules
+CREATE TABLE nodes (
+    id TEXT PRIMARY KEY,
+    kind TEXT,          -- 'file', 'function', 'class', 'module'
+    name TEXT,
+    file_path TEXT,
+    line_start INT,
+    cluster_id INT      -- from community detection
+);
+
+-- Edges: relationships
+CREATE TABLE edges (
+    source_id TEXT,
+    target_id TEXT,
+    kind TEXT           -- 'imports', 'calls', 'inherits', 'contains'
+);
+
+-- Summaries: LLM-generated per cluster
+CREATE TABLE summaries (
+    cluster_id INT PRIMARY KEY,
+    summary TEXT,
+    key_functions TEXT[]
+);
+```
+
+### Pipeline
+
+```
+Source Code (e.g., linux-kernel/)
+         │
+         ▼
+┌─────────────────────────────────────┐
+│ 1. Parse with tree-sitter           │
+│    → functions, classes, imports    │
+└─────────────────┬───────────────────┘
+                  │
+                  ▼
+┌─────────────────────────────────────┐
+│ 2. Build graph in DuckDB            │
+│    → nodes (symbols) + edges (calls)│
+└─────────────────┬───────────────────┘
+                  │
+                  ▼
+┌─────────────────────────────────────┐
+│ 3. Community detection (igraph)     │
+│    → cluster related code           │
+│    → "networking", "scheduler", etc │
+└─────────────────┬───────────────────┘
+                  │
+                  ▼
+┌─────────────────────────────────────┐
+│ 4. Generate summaries (LLM)         │
+│    → one summary per cluster        │
+└─────────────────┬───────────────────┘
+                  │
+                  ▼
+┌─────────────────────────────────────┐
+│ 5. Embed & index (LanceDB)          │
+│    → code chunks + summaries        │
+└─────────────────────────────────────┘
+         │
+         ▼
+    linux-kernel.wiki/
+    ├── graph.db          (DuckDB)
+    ├── vectors.lance/    (LanceDB)
+    └── meta.json         (version, stats)
+```
+
+### Query Flow
+
+```
+User: "How does the Linux scheduler work?"
+         │
+         ▼
+┌─────────────────────────────────────┐
+│ 1. Vector search → relevant chunks  │
+│ 2. Find cluster_id of top results   │
+│ 3. Fetch cluster summary            │
+│ 4. Graph query: related functions   │
+│ 5. Combine into response            │
+└─────────────────────────────────────┘
+```
+
 ---
 
 ## Success Metrics
