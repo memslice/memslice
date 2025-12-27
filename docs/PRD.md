@@ -20,7 +20,7 @@
 ### Quick Start
 
 ```bash
-pip install memslice && memslice start -d
+uv tool install memslice && memslice start -d
 ```
 
 ---
@@ -114,7 +114,7 @@ Memslice runs as an **independent local service** that AI tools connect to:
 1. **Universal** - Works with ANY agentic coding tool, not locked to one ecosystem
 2. **Local-First** - All data on local disk, no cloud dependency, your data stays yours
 3. **Lightweight** - No Docker, no Java, no heavy dependencies—just Python
-4. **Zero-Config** - `pip install && memslice start -d` should just work
+4. **Zero-Config** - `uv tool install memslice && memslice start -d` should just work
 5. **Portable** - Copy `~/.memslice/` to migrate everything
 6. **Open Source** - MIT license, community-driven, no vendor lock-in
 
@@ -444,7 +444,7 @@ memslice/
 
 ### Developer Experience
 
-- [ ] One-command install: `pip install memslice`
+- [ ] One-command install: `uv tool install memslice`
 - [ ] One-command start: `memslice start -d`
 - [ ] Works with Claude Code out of the box
 - [ ] Clear, copy-paste integration docs for each tool
